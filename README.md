@@ -61,27 +61,22 @@ Stop building UI components from scratch! This Expo starter template comes with:
 2. **Menu Demo** (`/app/(tabs)/menu-demo.tsx`) - Hamburger menu implementation
 3. **Permissions Demo** (`/app/(tabs)/permissions-demo.tsx`) - Permission management UI
 
-## 🏗️ Project Structure (Recommended for Production)
+## 🏗️ Project Structure
 
 ```
-my-app/
 ├── app/                    # 📱 Expo Router screens
-│   ├── (auth)/            # 🔐 Authentication flow
 │   ├── (tabs)/            # 📊 Tab navigation
+│   │   ├── index.tsx      # Component showcase
+│   │   ├── menu-demo.tsx  # Menu examples
+│   │   └── permissions-demo.tsx # Permission examples
 │   └── _layout.tsx        # 🎨 Root layout
 ├── components/            
-│   ├── ui/                # 🎨 UI component library
-│   ├── common/            # 🔄 Shared components
-│   └── features/          # 🎯 Feature components
-├── services/              # 🌐 API & external services
-│   ├── api/              # 📡 API client & endpoints
-│   └── storage/          # 💾 Local storage
-├── store/                 # 🗄️ State management
+│   ├── ui/                # 🎨 UI component library (20+ components)
+│   └── error-boundary/    # Error handling components
 ├── hooks/                 # 🪝 Custom React hooks
-├── utils/                 # 🛠️ Utility functions
-├── types/                 # 📘 TypeScript types
-├── constants/             # 📌 App constants
-└── assets/                # 🖼️ Images, fonts, etc.
+├── constants/             # 📌 App constants & colors
+├── config/                # ⚙️ App configuration
+├── assets/                # 🖼️ Images, fonts, etc.
 ```
 
 ## ⚠️ Important Notes
@@ -134,7 +129,7 @@ npx eas build --profile development --platform android
 ## 📁 Project Structure
 
 ```
-my-app/
+expo-nativewind-template/
 ├── app/                    # App routes (Expo Router)
 │   ├── (tabs)/            # Tab navigation screens
 │   │   ├── _layout.tsx    # Tab layout configuration
