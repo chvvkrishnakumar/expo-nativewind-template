@@ -55,6 +55,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="error-demo"
+        options={{
+          title: "Errors",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={22} name="exclamationmark.triangle.fill" color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

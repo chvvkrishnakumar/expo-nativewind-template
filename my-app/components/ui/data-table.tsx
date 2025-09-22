@@ -1,18 +1,15 @@
 import * as React from "react";
-import {
-  View,
-  FlatList,
-  Pressable,
-  ActivityIndicator,
-  type ViewProps,
-  type ListRenderItem,
-} from "react-native";
+import { type ListRenderItem, type ViewStyle, View as RNView } from "react-native";
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon, ArrowUpDownIcon } from "./lib/icons";
 import { Text } from "./text";
 import { Checkbox } from "./checkbox";
 import { ScrollView } from "./scroll-view";
+import { Select } from "./select";
+import { View, type ViewProps } from "./view";
+import { FlatList } from "./flat-list";
+import { Pressable } from "./pressable";
+import { Spinner } from "./spinner";
 import { cn } from "./utils/cn";
-import { cva, type VariantProps } from "class-variance-authority";
 
 /**
  * DataTable Component
@@ -45,19 +42,19 @@ import { cva, type VariantProps } from "class-variance-authority";
  * ```
  */
 
-export interface DataTableColumn {
-  field: string;
+export interface DataTableColumn<T> {
+  field: Extract<keyof T, string>;
   headerName: string;
   width?: number;
   flex?: number;
   align?: "left" | "center" | "right";
   sortable?: boolean;
-  renderCell?: (params: { value: any; row: any }) => React.ReactNode;
+  renderCell?: (params: { value: T[keyof T]; row: T }) => React.ReactNode;
 }
 
-export interface DataTableProps extends Omit<ViewProps, "children"> {
-  rows: any[];
-  columns: DataTableColumn[];
+export interface DataTableProps<T> extends Omit<ViewProps, "children"> {
+  rows: T[];
+  columns: DataTableColumn<T>[];
   
   // Pagination
   page?: number;
@@ -69,207 +66,204 @@ export interface DataTableProps extends Omit<ViewProps, "children"> {
   
   // Selection
   selectable?: boolean;
-  onSelectionChange?: (selectedRows: any[]) => void;
+  onSelectionChange?: (selectedRows: T[]) => void;
   
   // Other
   loading?: boolean;
-  onRowClick?: (row: any) => void;
+  onRowClick?: (row: T) => void;
   emptyMessage?: string;
-  getRowId?: (row: any) => string | number;
+  getRowId?: (row: T) => string | number;
   variant?: "default" | "striped";
 }
 
-const tableVariants = cva("", {
-  variants: {
-    variant: {
-      default: "",
-      striped: "",
-    },
-  },
-  defaultVariants: {
-    variant: "default",
-  },
-});
+function DataTableInner<T extends Record<string, any>>(
+  props: DataTableProps<T> & { forwardedRef?: React.Ref<RNView> }
+) {
+  const {
+    rows,
+    columns,
+    page = 0,
+    pageSize = 10,
+    pageSizeOptions = [5, 10, 20],
+    onPageChange,
+    onPageSizeChange,
+    totalRows,
+    selectable = false,
+    onSelectionChange,
+    loading = false,
+    onRowClick,
+    emptyMessage = "No data available",
+    getRowId = (row: T) => (row as any).id as string | number,
+    variant = "default",
+    className,
+    style,
+    forwardedRef,
+    ...viewProps
+  } = props;
 
-export const DataTable = React.forwardRef<
-  React.ElementRef<typeof View>,
-  DataTableProps
->(
-  (
-    {
-      rows,
-      columns,
-      page: controlledPage,
-      pageSize: controlledPageSize,
-      pageSizeOptions = [10, 25, 50],
-      onPageChange,
-      onPageSizeChange,
-      totalRows,
-      selectable = false,
-      onSelectionChange,
-      loading = false,
-      onRowClick,
-      emptyMessage = "No data available",
-      getRowId = (row) => row.id,
-      variant = "default",
-      className,
-      ...props
-    },
-    ref
-  ) => {
-    // Internal state for uncontrolled mode
-    const [internalPage, setInternalPage] = React.useState(0);
-    const [internalPageSize, setInternalPageSize] = React.useState(
-      pageSizeOptions[0] || 10
-    );
-    const [selectedRows, setSelectedRows] = React.useState<Set<string | number>>(
-      new Set()
-    );
-    const [sortColumn, setSortColumn] = React.useState<string | null>(null);
-    const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
-    const [showPageSizeDropdown, setShowPageSizeDropdown] = React.useState(false);
+  // State
+  const [selectedRows, setSelectedRows] = React.useState<Set<string | number>>(new Set());
+  const [sortColumn, setSortColumn] = React.useState<Extract<keyof T, string> | null>(null);
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
 
-    // Use controlled values if provided, otherwise use internal state
-    const currentPage = controlledPage ?? internalPage;
-    const currentPageSize = controlledPageSize ?? internalPageSize;
-    const totalRowCount = totalRows ?? rows.length;
+  // Computed values
+  const totalPages = Math.ceil((totalRows ?? rows.length) / pageSize);
+  const displayRows = React.useMemo(() => {
+    let processedRows = [...rows];
 
-    // Handle page changes
-    const handlePageChange = (newPage: number) => {
-      if (controlledPage === undefined) {
-        setInternalPage(newPage);
-      }
-      onPageChange?.(newPage);
-    };
+    // Apply sorting
+    if (sortColumn) {
+      processedRows.sort((a, b) => {
+        const aValue = (a as any)[sortColumn];
+        const bValue = (b as any)[sortColumn];
 
-    // Handle page size changes
-    const handlePageSizeChange = (newSize: number) => {
-      if (controlledPageSize === undefined) {
-        setInternalPageSize(newSize);
-        // Reset to first page when page size changes
-        setInternalPage(0);
-      }
-      onPageSizeChange?.(newSize);
-      if (controlledPage === undefined) {
-        onPageChange?.(0);
-      }
-      setShowPageSizeDropdown(false);
-    };
+        if (aValue === bValue) return 0;
+        if (aValue == null) return 1;
+        if (bValue == null) return -1;
 
-    // Handle sorting
-    const handleSort = (field: string) => {
-      if (sortColumn === field) {
-        setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-      } else {
-        setSortColumn(field);
-        setSortDirection("asc");
-      }
-    };
-
-    // Sort rows
-    const sortedRows = React.useMemo(() => {
-      if (!sortColumn) return rows;
-      
-      return [...rows].sort((a, b) => {
-        const aVal = a[sortColumn];
-        const bVal = b[sortColumn];
-        
-        if (aVal === bVal) return 0;
-        if (aVal == null) return 1;
-        if (bVal == null) return -1;
-        
-        const comparison = aVal < bVal ? -1 : 1;
-        return sortDirection === "asc" ? comparison : -comparison;
+        if (sortDirection === "asc") {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
       });
-    }, [rows, sortColumn, sortDirection]);
+    }
 
-    // Paginate rows
-    const paginatedRows = React.useMemo(() => {
-      const start = currentPage * currentPageSize;
-      const end = start + currentPageSize;
-      return sortedRows.slice(start, end);
-    }, [sortedRows, currentPage, currentPageSize]);
+    // Apply pagination (if totalRows is not provided, we're doing client-side pagination)
+    if (!totalRows) {
+      const start = page * pageSize;
+      const end = start + pageSize;
+      processedRows = processedRows.slice(start, end);
+    }
 
-    // Handle row selection
-    const handleRowSelect = (rowId: string | number) => {
-      const newSelected = new Set(selectedRows);
-      if (newSelected.has(rowId)) {
-        newSelected.delete(rowId);
+    return processedRows;
+  }, [rows, sortColumn, sortDirection, page, pageSize, totalRows]);
+
+  // Handlers
+  const handleSort = React.useCallback((field: Extract<keyof T, string>) => {
+    if (sortColumn === field) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(field);
+      setSortDirection("asc");
+    }
+  }, [sortColumn]);
+
+  const handleSelectAll = React.useCallback(() => {
+    if (selectedRows.size === displayRows.length) {
+      setSelectedRows(new Set());
+    } else {
+      const allIds = displayRows.map(row => getRowId(row));
+      setSelectedRows(new Set(allIds));
+    }
+  }, [selectedRows.size, displayRows, getRowId]);
+
+  const handleRowSelect = React.useCallback((rowId: string | number) => {
+    setSelectedRows(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(rowId)) {
+        newSelection.delete(rowId);
       } else {
-        newSelected.add(rowId);
+        newSelection.add(rowId);
       }
-      setSelectedRows(newSelected);
-      
-      if (onSelectionChange) {
-        const selectedRowData = rows.filter((row) =>
-          newSelected.has(getRowId(row))
-        );
-        onSelectionChange(selectedRowData);
-      }
-    };
+      return newSelection;
+    });
+  }, []);
 
-    // Handle select all
-    const handleSelectAll = () => {
-      if (selectedRows.size === paginatedRows.length) {
-        setSelectedRows(new Set());
-        onSelectionChange?.([]);
+  // Effects
+  React.useEffect(() => {
+    if (onSelectionChange) {
+      const selectedItems = rows.filter(row => selectedRows.has(getRowId(row)));
+      onSelectionChange(selectedItems);
+    }
+  }, [selectedRows, rows, onSelectionChange, getRowId]);
+
+  // Calculate column widths
+  const calculateColumnStyle = React.useCallback((column: DataTableColumn<T>, index: number): ViewStyle => {
+    const isLastColumn = index === columns.length - 1;
+    
+    // Fixed width column
+    if (column.width) {
+      return { 
+        width: column.width, 
+        minWidth: column.width,
+        maxWidth: column.width 
+      };
+    }
+    
+    // Flex column (only last column can be flexible)
+    if (column.flex) {
+      if (isLastColumn) {
+        return { 
+          flex: column.flex, 
+          minWidth: 120
+        };
       } else {
-        const newSelected = new Set(paginatedRows.map((row) => getRowId(row)));
-        setSelectedRows(newSelected);
-        onSelectionChange?.(paginatedRows);
+        // Non-last flex columns become fixed width
+        return {
+          width: 200,
+          minWidth: 120
+        };
       }
+    }
+    
+    // Default: last column is flexible, others are fixed
+    if (isLastColumn) {
+      return { 
+        flex: 1,
+        minWidth: 120
+      };
+    }
+    return { 
+      width: 150,
+      minWidth: 120
     };
+  }, [columns.length]);
 
-    const isAllSelected =
-      paginatedRows.length > 0 && selectedRows.size === paginatedRows.length;
-
-    // Calculate column widths
-    const totalFixedWidth = columns.reduce(
-      (sum, col) => sum + (col.width || 0),
-      0
-    );
-    const flexColumns = columns.filter((col) => col.flex);
-    const flexUnit = flexColumns.length > 0 ? 1 / flexColumns.length : 0;
-
-    // Render header
-    const renderHeader = () => (
-      <View className="flex-row border-b border-border bg-muted/50">
+  // Header component
+  const renderHeader = React.useCallback(() => {
+    return (
+      <View className="flex-row border-b border-border bg-muted/40">
         {selectable && (
-          <Pressable
-            onPress={handleSelectAll}
-            className="w-12 px-3 py-3 items-center justify-center"
-          >
-            <Checkbox checked={isAllSelected} onCheckedChange={handleSelectAll} />
-          </Pressable>
+          <View className="w-12 items-center justify-center p-2">
+            <Checkbox
+              checked={selectedRows.size === displayRows.length && displayRows.length > 0}
+              onCheckedChange={handleSelectAll}
+            />
+          </View>
         )}
-        {columns.map((column) => {
-          const width = column.width || (column.flex ? `${column.flex * flexUnit * 100}%` : 100);
-          const alignClass = column.align === "center" ? "items-center" : column.align === "right" ? "items-end" : "items-start";
-          
+        {columns.map((column, index) => {
+          const columnStyle = calculateColumnStyle(column, index);
+          const textAlign = column.align || "left";
+
           return (
             <Pressable
-              key={column.field}
+              key={column.field as string}
+              style={columnStyle}
+              className="flex-row items-center p-3"
               onPress={() => column.sortable && handleSort(column.field)}
-              className={cn(
-                "px-3 py-3 flex-row",
-                alignClass,
-                column.sortable && "active:opacity-70"
-              )}
-              style={{ width }}
             >
-              <Text variant="small" className="font-medium">
+              <Text
+                variant="small"
+                className={cn(
+                  "font-semibold flex-1",
+                  textAlign === "center" && "text-center",
+                  textAlign === "right" && "text-right"
+                )}
+                numberOfLines={1}
+              >
                 {column.headerName}
               </Text>
               {column.sortable && (
                 <View className="ml-1">
                   {sortColumn === column.field ? (
                     sortDirection === "asc" ? (
-                      <ChevronUpIcon className="h-4 w-4 text-foreground" />
+                      <ChevronUpIcon className="w-3 h-3 text-foreground" />
                     ) : (
-                      <ChevronDownIcon className="h-4 w-4 text-foreground" />
+                      <ChevronDownIcon className="w-3 h-3 text-foreground" />
                     )
                   ) : (
-                    <ArrowUpDownIcon className="h-4 w-4 text-muted-foreground" />
+                    <ArrowUpDownIcon className="w-3 h-3 text-muted-foreground" />
                   )}
                 </View>
               )}
@@ -278,169 +272,202 @@ export const DataTable = React.forwardRef<
         })}
       </View>
     );
+  }, [selectable, columns, selectedRows.size, displayRows.length, handleSelectAll, handleSort, sortColumn, sortDirection, calculateColumnStyle]);
 
-    // Render row
-    const renderRow: ListRenderItem<any> = ({ item, index }) => {
-      const rowId = getRowId(item);
-      const isSelected = selectedRows.has(rowId);
-      const isStriped = variant === "striped" && index % 2 === 1;
-
-      return (
-        <Pressable
-          onPress={() => onRowClick?.(item)}
-          className={cn(
-            "flex-row border-b border-border",
-            isStriped && "bg-muted/20",
-            onRowClick && "active:opacity-70"
-          )}
-        >
-          {selectable && (
-            <Pressable
-              onPress={() => handleRowSelect(rowId)}
-              className="w-12 px-3 py-3 items-center justify-center"
-            >
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => handleRowSelect(rowId)}
-              />
-            </Pressable>
-          )}
-          {columns.map((column) => {
-            const value = item[column.field];
-            const width = column.width || (column.flex ? `${column.flex * flexUnit * 100}%` : 100);
-            const alignClass = column.align === "center" ? "items-center" : column.align === "right" ? "items-end" : "items-start";
-
-            return (
-              <View
-                key={column.field}
-                className={cn("px-3 py-3", alignClass)}
-                style={{ width }}
-              >
-                {column.renderCell ? (
-                  column.renderCell({ value, row: item })
-                ) : (
-                  <Text variant="small" numberOfLines={1}>
-                    {value?.toString() || ""}
-                  </Text>
-                )}
-              </View>
-            );
-          })}
-        </Pressable>
-      );
-    };
-
-    // Calculate pagination info
-    const totalPages = Math.ceil(totalRowCount / currentPageSize);
-    const startRow = currentPage * currentPageSize + 1;
-    const endRow = Math.min((currentPage + 1) * currentPageSize, totalRowCount);
-
-    if (loading) {
-      return (
-        <View
-          ref={ref}
-          className={cn("flex-1 items-center justify-center p-8", className)}
-          {...props}
-        >
-          <ActivityIndicator size="large" />
-          <Text variant="muted" className="mt-2">
-            Loading...
-          </Text>
-        </View>
-      );
+  // Render cell content
+  const renderCellContent = React.useCallback((column: DataTableColumn<T>, row: T) => {
+    const value = row[column.field];
+    
+    if (column.renderCell) {
+      return column.renderCell({ value, row });
     }
 
     return (
-      <View
-        ref={ref}
-        className={cn("flex-1 border border-border rounded-lg", className)}
-        {...props}
+      <Text
+        variant="small"
+        className={cn(
+          column.align === "center" && "text-center",
+          column.align === "right" && "text-right"
+        )}
+        numberOfLines={1}
+        ellipsizeMode="tail"
       >
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ minWidth: "100%" }}>
-            {renderHeader()}
-            <FlatList
-              data={paginatedRows}
-              renderItem={renderRow}
-              keyExtractor={(item) => getRowId(item).toString()}
-              scrollEnabled={false}
-              ListEmptyComponent={
-                <View className="p-8 items-center">
-                  <Text variant="muted">{emptyMessage}</Text>
-                </View>
-              }
+        {String(value ?? "")}
+      </Text>
+    );
+  }, []);
+
+  // Render row
+  const renderRow: ListRenderItem<T> = React.useCallback(({ item, index }: { item: T; index: number }) => {
+    const rowId = getRowId(item);
+    const isSelected = selectedRows.has(rowId);
+    const isStriped = variant === "striped" && index % 2 === 1;
+
+    return (
+      <Pressable
+        onPress={() => onRowClick?.(item)}
+        className={cn(
+          "flex-row border-b border-border",
+          isStriped && "bg-muted/20",
+          onRowClick && "active:opacity-70"
+        )}
+      >
+        {selectable && (
+          <Pressable
+            onPress={() => handleRowSelect(rowId)}
+            className="w-12 items-center justify-center p-2"
+          >
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => handleRowSelect(rowId)}
             />
-          </View>
-        </ScrollView>
-
-        {/* Pagination controls */}
-        <View className="flex-row items-center justify-between p-3 border-t border-border bg-muted/30">
-          <View className="flex-row items-center gap-3">
-            <Text variant="small" className="text-muted-foreground">
-              Rows per page:
-            </Text>
-            
-            <View className="relative">
-              <Pressable
-                onPress={() => setShowPageSizeDropdown(!showPageSizeDropdown)}
-                className="flex-row items-center gap-1 px-3 py-1.5 bg-background border border-border rounded-md"
-              >
-                <Text variant="small">{currentPageSize}</Text>
-                <ChevronDownIcon className="h-4 w-4" />
-              </Pressable>
-              
-              {showPageSizeDropdown && (
-                <View className="absolute bottom-full mb-1 right-0 bg-background border border-border rounded-md shadow-lg z-10">
-                  {pageSizeOptions.map((size) => (
-                    <Pressable
-                      key={size}
-                      onPress={() => handlePageSizeChange(size)}
-                      className={cn(
-                        "px-4 py-2",
-                        size === currentPageSize && "bg-muted"
-                      )}
-                    >
-                      <Text variant="small">{size}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
+          </Pressable>
+        )}
+        {columns.map((column, index) => {
+          const columnStyle = calculateColumnStyle(column, index);
+          return (
+            <View key={column.field as string} style={columnStyle} className="p-3">
+              {renderCellContent(column, item)}
             </View>
-          </View>
+          );
+        })}
+      </Pressable>
+    );
+  }, [selectedRows, selectable, onRowClick, variant, columns, getRowId, handleRowSelect, renderCellContent, calculateColumnStyle]);
 
-          <View className="flex-row items-center gap-3">
-            <Text variant="small" className="text-muted-foreground">
-              {startRow}-{endRow} of {totalRowCount}
-            </Text>
-            
-            <View className="flex-row items-center gap-1">
-              <Pressable
-                onPress={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 0}
+  // Pagination component
+  const renderPagination = React.useCallback(() => {
+    if (!onPageChange && !onPageSizeChange) return null;
+
+    return (
+      <View className="flex-row items-center justify-between p-3 border-t border-border">
+        <View className="flex-row items-center gap-3">
+          <Text variant="small" className="text-muted-foreground">
+            Rows per page:
+          </Text>
+          <Select
+            value={{ value: String(pageSize), label: String(pageSize) }}
+            onValueChange={(option) => option && onPageSizeChange?.(Number(option.value))}
+            options={pageSizeOptions.map(size => ({ 
+              value: String(size), 
+              label: String(size) 
+            }))}
+            className="w-20"
+          />
+        </View>
+
+        <View className="flex-row items-center gap-2">
+          <Text variant="small" className="text-muted-foreground">
+            {page * pageSize + 1}-{Math.min((page + 1) * pageSize, totalRows ?? rows.length)} of{" "}
+            {totalRows ?? rows.length}
+          </Text>
+          <View className="flex-row gap-1">
+            <Pressable
+              onPress={() => onPageChange?.(page - 1)}
+              disabled={page === 0}
+              className="p-1 rounded active:bg-muted"
+            >
+              <ChevronLeftIcon
                 className={cn(
-                  "p-2 rounded-md bg-background border border-border",
-                  currentPage === 0 ? "opacity-50" : "active:bg-muted"
+                  "w-4 h-4",
+                  page === 0 ? "text-muted-foreground/30" : "text-foreground"
                 )}
-              >
-                <ChevronLeftIcon className="h-5 w-5 text-foreground" />
-              </Pressable>
-              
-              <Pressable
-                onPress={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage >= totalPages - 1}
+              />
+            </Pressable>
+            <Pressable
+              onPress={() => onPageChange?.(page + 1)}
+              disabled={page >= totalPages - 1}
+              className="p-1 rounded active:bg-muted"
+            >
+              <ChevronRightIcon
                 className={cn(
-                  "p-2 rounded-md bg-background border border-border",
-                  currentPage >= totalPages - 1 ? "opacity-50" : "active:bg-muted"
+                  "w-4 h-4",
+                  page >= totalPages - 1 ? "text-muted-foreground/30" : "text-foreground"
                 )}
-              >
-                <ChevronRightIcon className="h-5 w-5 text-foreground" />
-              </Pressable>
-            </View>
+              />
+            </Pressable>
           </View>
         </View>
       </View>
     );
+  }, [onPageChange, onPageSizeChange, page, pageSize, pageSizeOptions, totalRows, rows.length, totalPages]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <View
+        ref={forwardedRef}
+        className={cn("flex-1 items-center justify-center p-8", className)}
+        style={style}
+        {...viewProps}
+      >
+        <Spinner size="large" />
+        <Text variant="muted" className="mt-2">
+          Loading...
+        </Text>
+      </View>
+    );
   }
+
+  // Empty state
+  if (rows.length === 0) {
+    return (
+      <View
+        ref={forwardedRef}
+        className={cn("flex-1 items-center justify-center p-8", className)}
+        style={style}
+        {...viewProps}
+      >
+        <Text variant="muted">{emptyMessage}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View
+      ref={forwardedRef}
+      className={cn("flex-1 border border-border rounded-lg overflow-hidden", className)}
+      style={style}
+      {...viewProps}
+    >
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={true}
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
+        <View style={{ minWidth: '100%' }}>
+          {renderHeader()}
+          <FlatList
+            data={displayRows}
+            renderItem={renderRow}
+            keyExtractor={(item) => String(getRowId(item))}
+            showsVerticalScrollIndicator={false}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ flexGrow: 1 }}
+            ListEmptyComponent={
+              <View className="flex-1 items-center justify-center p-8">
+                <Text variant="muted">{emptyMessage}</Text>
+              </View>
+            }
+            removeClippedSubviews={true}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+          />
+        </View>
+      </ScrollView>
+      {renderPagination()}
+    </View>
+  );
+}
+
+// Export with proper typing
+const DataTableComponent = React.forwardRef<RNView, DataTableProps<any>>(
+  (props, ref) => <DataTableInner {...props} forwardedRef={ref} />
 );
 
-DataTable.displayName = "DataTable";
+DataTableComponent.displayName = "DataTable";
+
+export const DataTable = DataTableComponent as <T extends Record<string, any>>(
+  props: DataTableProps<T> & React.RefAttributes<RNView>
+) => React.ReactElement;
