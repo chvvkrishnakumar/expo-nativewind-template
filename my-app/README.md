@@ -1,9 +1,10 @@
-# 📱 Expo React Native Starter Template with UI Components
+# 📱 Expo NativeWind Template
 
-> 🚀 **The Ultimate Expo Starter Kit** - Production-ready mobile app template with 20+ pre-built UI components, TypeScript, NativeWind (Tailwind CSS), and platform-specific behaviors for iOS/Android.
+> 🚀 **Production-Ready Expo Starter Kit** - Mobile app template with 20+ pre-built UI components, TypeScript, NativeWind (Tailwind CSS), and platform-specific behaviors for iOS/Android.
 
-[![Expo](https://img.shields.io/badge/Expo-SDK~53.0.0-000.svg?style=flat&logo=expo)](https://expo.dev)
-[![React Native](https://img.shields.io/badge/React%20Native-0.74.5-61DAFB.svg?style=flat&logo=react)](https://reactnative.dev)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/chvvkrishnakumar/expo-nativewind-template/releases)
+[![Expo](https://img.shields.io/badge/Expo-SDK_53-000.svg?style=flat&logo=expo)](https://expo.dev)
+[![React Native](https://img.shields.io/badge/React%20Native-0.79.6-61DAFB.svg?style=flat&logo=react)](https://reactnative.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue.svg?style=flat&logo=typescript)](https://www.typescriptlang.org)
 [![NativeWind](https://img.shields.io/badge/NativeWind-v4-38B2AC.svg?style=flat)](https://www.nativewind.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -376,6 +377,10 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🏷️ Version
+
+Current version: **0.1.0** - See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## 🙏 Acknowledgments
 

@@ -125,7 +125,7 @@ const DrawerContent = React.forwardRef<
       <View className="flex-1 flex-row">
         {/* Backdrop */}
         <Pressable
-          className="absolute inset-0 bg-black/50"
+          className="absolute inset-0 bg-foreground/50"
           onPress={() => onOpenChange(false)}
         />
         
@@ -144,7 +144,7 @@ const DrawerContent = React.forwardRef<
           className={cn(
             "bg-background",
             Platform.select({
-              ios: "shadow-lg shadow-black/25",
+              ios: "shadow-lg shadow-foreground/25",
               android: "elevation-16",
             }),
             className
@@ -266,7 +266,7 @@ const HamburgerMenu = React.forwardRef<
       className={cn(
         "absolute z-50 p-3 bg-background rounded-lg border border-border",
         Platform.select({
-          ios: "shadow-sm shadow-black/25",
+          ios: "shadow-sm shadow-foreground/25",
           android: "elevation-4",
         }),
         positionClasses[position],

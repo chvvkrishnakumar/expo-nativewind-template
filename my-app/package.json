@@ -1,7 +1,28 @@
 {
-  "name": "expo-ui-starter",
+  "name": "expo-nativewind-template",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "0.1.0",
+  "description": "A production-ready Expo template with NativeWind, TypeScript, and 20+ pre-built UI components",
+  "author": "Krishna Kumar",
+  "license": "MIT",
+  "keywords": [
+    "expo",
+    "react-native",
+    "nativewind",
+    "tailwindcss",
+    "typescript",
+    "template",
+    "starter",
+    "ui-components"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chvvkrishnakumar/expo-nativewind-template"
+  },
+  "bugs": {
+    "url": "https://github.com/chvvkrishnakumar/expo-nativewind-template/issues"
+  },
+  "homepage": "https://github.com/chvvkrishnakumar/expo-nativewind-template#readme",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",

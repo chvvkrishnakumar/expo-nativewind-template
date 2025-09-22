@@ -91,7 +91,7 @@ const DialogContent = React.forwardRef<
         className="flex-1"
       >
         <Pressable 
-          className="flex-1 justify-center items-center bg-black/50 p-4"
+          className="flex-1 justify-center items-center bg-foreground/50 p-4"
           onPress={() => onOpenChange(false)}
         >
           <Pressable
@@ -100,7 +100,7 @@ const DialogContent = React.forwardRef<
               "bg-background rounded-lg p-6 w-full max-w-sm",
               "shadow-lg",
               Platform.select({
-                ios: "shadow-black/25",
+                ios: "shadow-foreground/25",
                 android: "elevation-24",
               }),
               className
