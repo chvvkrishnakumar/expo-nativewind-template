@@ -13,7 +13,6 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemeProvider as UIThemeProvider } from '@/components/ui/theme';
 import { ErrorBoundary } from '@/components/error-boundary';
 
-// Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -24,7 +23,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (loaded) {
-      // Hide the splash screen after fonts are loaded
       SplashScreen.hideAsync();
     }
   }, [loaded]);
