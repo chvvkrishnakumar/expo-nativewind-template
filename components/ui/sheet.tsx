@@ -1,16 +1,26 @@
 import * as React from "react";
-import BottomSheet, {
-  BottomSheetModal,
-  BottomSheetModalProvider,
-  BottomSheetView,
-  BottomSheetBackdrop,
-} from "@gorhom/bottom-sheet";
-import { View, Pressable, useWindowDimensions, Modal, Platform } from "react-native";
-import { cn } from "./utils/cn";
+import {
+  Modal,
+  Pressable,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
 import { iconWithClassName } from "./lib/icons/icon-with-classname";
+import { cn } from "./utils/cn";
 
 const XIcon = iconWithClassName(X);
+
+interface SheetContextType {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const SheetContext = React.createContext<SheetContextType>({
+  open: false,
+  onOpenChange: () => {},
+});
 
 interface SheetProps {
   children: React.ReactNode;
@@ -18,66 +28,11 @@ interface SheetProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-const Sheet = ({ children, open = false, onOpenChange = () => {} }: { 
-  children: React.ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}) => {
-  const bottomSheetModalRef = React.useRef<BottomSheetModal>(null);
-
-  React.useEffect(() => {
-    if (open) {
-      bottomSheetModalRef.current?.present();
-    } else {
-      bottomSheetModalRef.current?.dismiss();
-    }
-  }, [open]);
-
-  const handleSheetChanges = React.useCallback((index: number) => {
-    if (index === -1) {
-      onOpenChange(false);
-    }
-  }, [onOpenChange]);
-
-  // Extract trigger and content
-  let trigger: React.ReactNode = null;
-  let content: React.ReactNode = null;
-
-  React.Children.forEach(children, (child) => {
-    if (React.isValidElement(child)) {
-      if (child.type === SheetTrigger) {
-        const triggerProps = child.props as any;
-        if (triggerProps.asChild && React.isValidElement(triggerProps.children)) {
-          // Clone the child element with onPress
-          const childProps = (triggerProps.children as React.ReactElement<any>).props || {};
-          trigger = React.cloneElement(triggerProps.children as React.ReactElement<any>, {
-            ...childProps,
-            onPress: () => onOpenChange(true),
-          });
-        } else {
-          const childProps = child.props || {};
-          trigger = React.cloneElement(child as React.ReactElement<any>, {
-            ...childProps,
-            onPress: () => onOpenChange(true),
-          });
-        }
-      } else if (child.type === SheetContent) {
-        const childProps = child.props || {};
-        content = React.cloneElement(child as React.ReactElement<any>, {
-          ...childProps,
-          ref: bottomSheetModalRef,
-          onChange: handleSheetChanges,
-          onOpenChange,
-        });
-      }
-    }
-  });
-
+const Sheet = ({ children, open = false, onOpenChange = () => {} }: SheetProps) => {
   return (
-    <>
-      {trigger}
-      {content}
-    </>
+    <SheetContext.Provider value={{ open, onOpenChange }}>
+      {children}
+    </SheetContext.Provider>
   );
 };
 
@@ -86,14 +41,30 @@ const SheetTrigger = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof Pressable> & {
     asChild?: boolean;
   }
->(({ asChild, children, onPress, ...props }, ref) => {
-  // Don't render anything here, the Sheet component will handle it
+>(({ onPress, asChild, children, ...props }, ref) => {
+  const { onOpenChange } = React.useContext(SheetContext);
+
   if (asChild && React.isValidElement(children)) {
-    return children;
+    const childProps = children.props as any || {};
+    return React.cloneElement(children, {
+      ...childProps,
+      onPress: (e: any) => {
+        childProps?.onPress?.(e);
+        onPress?.(e);
+        onOpenChange(true);
+      },
+    } as any);
   }
-  
+
   return (
-    <Pressable ref={ref} onPress={onPress} {...props}>
+    <Pressable
+      ref={ref}
+      onPress={(e) => {
+        onPress?.(e);
+        onOpenChange(true);
+      }}
+      {...props}
+    >
       {children}
     </Pressable>
   );
@@ -105,61 +76,53 @@ interface SheetContentProps {
   className?: string;
   hideCloseButton?: boolean;
   snapPoints?: (string | number)[];
-  onChange?: (index: number) => void;
-  onOpenChange?: (open: boolean) => void;
 }
 
 const SheetContent = React.forwardRef<
-  BottomSheetModal,
+  React.ElementRef<typeof View>,
   SheetContentProps
->(({ children, className, hideCloseButton, snapPoints = ["25%", "50%", "90%"], onChange, onOpenChange }, ref) => {
+>(({ children, className, hideCloseButton }, ref) => {
+  const { open, onOpenChange } = React.useContext(SheetContext);
   const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   return (
-    <BottomSheetModal
-      ref={ref}
-      index={1}
-      snapPoints={snapPoints}
-      enablePanDownToClose
-      onChange={onChange}
-      backdropComponent={(props) => (
-        <BottomSheetBackdrop
-          {...props}
-          appearsOnIndex={0}
-          disappearsOnIndex={-1}
-          opacity={0.5}
-          onPress={() => onOpenChange?.(false)}
-        />
-      )}
-      backgroundStyle={{
-        backgroundColor: Platform.OS === "ios" ? "transparent" : undefined,
-      }}
-      handleIndicatorStyle={{
-        backgroundColor: "#9ca3af",
-        width: 36,
-        height: 4,
-      }}
+    <Modal
+      visible={open}
+      transparent
+      animationType="slide"
+      statusBarTranslucent
+      onRequestClose={() => onOpenChange(false)}
     >
-      <BottomSheetView 
-        className={cn(
-          "flex-1 bg-background rounded-t-3xl px-4",
-          className
-        )}
-        style={{ minHeight: height * 0.9 }}
-      >
-        {!hideCloseButton && (
-          <Pressable
-            onPress={() => onOpenChange?.(false)}
-            className="absolute right-4 top-4 z-10 rounded-sm opacity-70"
-          >
-            <XIcon className="h-5 w-5 text-foreground" />
-          </Pressable>
-        )}
-        <View className="pt-4">
+      <View className="flex-1 justify-end">
+        <Pressable
+          className="absolute inset-0 bg-foreground/50"
+          onPress={() => onOpenChange(false)}
+        />
+        <View
+          ref={ref}
+          className={cn(
+            "rounded-t-3xl border border-border bg-background px-4 pb-6 pt-4",
+            className
+          )}
+          style={{
+            maxHeight: height * 0.9,
+            paddingBottom: insets.bottom,
+          }}
+        >
+          <View className="mx-auto mb-4 h-1 w-9 rounded-full bg-muted-foreground" />
+          {!hideCloseButton && (
+            <Pressable
+              onPress={() => onOpenChange(false)}
+              className="absolute right-4 top-4 z-10 rounded-sm opacity-70"
+            >
+              <XIcon className="h-5 w-5 text-foreground" />
+            </Pressable>
+          )}
           {children}
         </View>
-      </BottomSheetView>
-    </BottomSheetModal>
+      </View>
+    </Modal>
   );
 });
 SheetContent.displayName = "SheetContent";
