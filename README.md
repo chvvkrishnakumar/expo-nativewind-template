@@ -2,15 +2,15 @@
 
 > 🚀 **Production-Ready Expo Starter Kit** - Mobile app template with 20+ pre-built UI components, TypeScript, NativeWind (Tailwind CSS), and platform-specific behaviors for iOS/Android.
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/chvvkrishnakumar/expo-nativewind-template/releases)
-[![Expo](https://img.shields.io/badge/Expo-SDK_53-000.svg?style=flat&logo=expo)](https://expo.dev)
+[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](https://github.com/chvvkrishnakumar/expo-nativewind-template/releases)
+[![Expo](https://img.shields.io/badge/Expo-SDK_56-000.svg?style=flat&logo=expo)](https://expo.dev)
 [![React Native](https://img.shields.io/badge/React%20Native-0.79.6-61DAFB.svg?style=flat&logo=react)](https://reactnative.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue.svg?style=flat&logo=typescript)](https://www.typescriptlang.org)
 [![NativeWind](https://img.shields.io/badge/NativeWind-v4-38B2AC.svg?style=flat)](https://www.nativewind.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <p align="center">
-  <img src="https://your-demo-gif.gif" alt="Demo" width="300" />
+  <strong>20+ Pre-built UI Components • TypeScript • NativeWind • Expo Router • Dark Mode</strong>
 </p>
 
 ## 🎯 Why This Template?
@@ -83,7 +83,7 @@ Stop building UI components from scratch! This Expo starter template comes with:
 
 ### Expo Go Limitations
 Some features require a development build instead of Expo Go:
-- **Push Notifications** - Requires development build (SDK 53+)
+- **Push Notifications** - Requires development build (SDK 56+)
 - **Camera** - May have limited functionality
 - **Other native modules** - Some features work better in dev builds
 
@@ -105,7 +105,7 @@ npx eas build --profile development --platform android
 
 1. **Clone the template**
    ```bash
-   git clone https://github.com/yourusername/expo-starter-template.git my-app
+   git clone https://github.com/chvvkrishnakumar/expo-nativewind-template.git my-app
    cd my-app
    ```
 
