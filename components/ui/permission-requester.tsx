@@ -1,9 +1,5 @@
 import * as React from "react";
 import { Platform, Linking } from "react-native";
-import * as Location from "expo-location";
-import * as MediaLibrary from "expo-media-library";
-import * as Contacts from "expo-contacts";
-import * as Notifications from "expo-notifications";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./dialog";
 import { Button } from "./button";
 import { Text } from "./text";
@@ -24,6 +20,9 @@ export type PermissionType =
   | "mediaLibrary"
   | "contacts"
   | "notifications";
+
+type PermissionStatus = "undetermined" | "granted" | "denied";
+type PermissionResult = { status: PermissionStatus | string };
 
 interface PermissionInfo {
   title: string;
@@ -64,6 +63,60 @@ const permissionInfoMap: Record<PermissionType, PermissionInfo> = {
   },
 };
 
+async function getPermissionAsync(permission: PermissionType) {
+  if (permission === "location") {
+    const Location = await import("expo-location");
+    return Location.getBackgroundPermissionsAsync();
+  }
+  if (permission === "locationForeground") {
+    const Location = await import("expo-location");
+    return Location.getForegroundPermissionsAsync();
+  }
+  if (permission === "mediaLibrary") {
+    const MediaLibrary = await import("expo-media-library");
+    return MediaLibrary.getPermissionsAsync();
+  }
+  if (permission === "contacts") {
+    const Contacts = await import("expo-contacts");
+    return Contacts.getPermissionsAsync();
+  }
+  if (permission === "notifications") {
+    const Notifications = await import("expo-notifications");
+    return Notifications.getPermissionsAsync();
+  }
+
+  return null;
+}
+
+async function requestPermissionAsync(permission: PermissionType) {
+  if (permission === "location") {
+    const Location = await import("expo-location");
+    return Location.requestBackgroundPermissionsAsync();
+  }
+  if (permission === "locationForeground") {
+    const Location = await import("expo-location");
+    return Location.requestForegroundPermissionsAsync();
+  }
+  if (permission === "mediaLibrary") {
+    const MediaLibrary = await import("expo-media-library");
+    return MediaLibrary.requestPermissionsAsync();
+  }
+  if (permission === "contacts") {
+    const Contacts = await import("expo-contacts");
+    return Contacts.requestPermissionsAsync();
+  }
+  if (permission === "notifications") {
+    const Notifications = await import("expo-notifications");
+    return Notifications.requestPermissionsAsync();
+  }
+
+  return null;
+}
+
+function normalizePermissionStatus(status: PermissionResult["status"]): PermissionStatus {
+  return status === "granted" || status === "denied" ? status : "undetermined";
+}
+
 interface PermissionRequesterProps {
   permission: PermissionType;
   children: (props: {
@@ -86,35 +139,22 @@ export function PermissionRequester({
 
   const checkPermission = React.useCallback(async () => {
     try {
-      let permissionStatus;
-      
-      // For now, we'll skip camera permission check due to API changes
-      // You can implement expo-camera hooks separately
-      if (permission === "camera") {
-        // Skip checking for camera in this example
-        return;
-      } else if (permission === "location") {
-        permissionStatus = await Location.getBackgroundPermissionsAsync();
-      } else if (permission === "locationForeground") {
-        permissionStatus = await Location.getForegroundPermissionsAsync();
-      } else if (permission === "mediaLibrary") {
-        permissionStatus = await MediaLibrary.getPermissionsAsync();
-      } else if (permission === "contacts") {
-        permissionStatus = await Contacts.getPermissionsAsync();
-      } else if (permission === "notifications") {
-        permissionStatus = await Notifications.getPermissionsAsync();
-      }
+      const permissionStatus = await getPermissionAsync(permission);
       
       if (permissionStatus) {
-        setStatus(permissionStatus.status as "undetermined" | "granted" | "denied");
+        setStatus(normalizePermissionStatus(permissionStatus.status));
       }
     } catch (error) {
-      console.error("Error checking permission:", error);
+      console.warn("Unable to check permission:", error);
     }
   }, [permission]);
 
   React.useEffect(() => {
-    checkPermission();
+    const timeout = setTimeout(() => {
+      void checkPermission();
+    }, 0);
+
+    return () => clearTimeout(timeout);
   }, [checkPermission]);
 
   const requestPermission = async () => {
@@ -126,8 +166,6 @@ export function PermissionRequester({
     }
 
     try {
-      let permissionResult;
-      
       // For camera, you'll need to use the useCameraPermissions hook in your component
       if (permission === "camera") {
         // For camera, just simulate granted for demo
@@ -135,20 +173,12 @@ export function PermissionRequester({
         setStatus("granted");
         onPermissionGranted?.();
         return;
-      } else if (permission === "location") {
-        permissionResult = await Location.requestBackgroundPermissionsAsync();
-      } else if (permission === "locationForeground") {
-        permissionResult = await Location.requestForegroundPermissionsAsync();
-      } else if (permission === "mediaLibrary") {
-        permissionResult = await MediaLibrary.requestPermissionsAsync();
-      } else if (permission === "contacts") {
-        permissionResult = await Contacts.requestPermissionsAsync();
-      } else if (permission === "notifications") {
-        permissionResult = await Notifications.requestPermissionsAsync();
       }
+
+      const permissionResult = await requestPermissionAsync(permission);
       
       if (permissionResult) {
-        const newStatus = permissionResult.status as "undetermined" | "granted" | "denied";
+        const newStatus = normalizePermissionStatus(permissionResult.status);
         setStatus(newStatus);
         
         if (newStatus === "granted") {
@@ -158,7 +188,7 @@ export function PermissionRequester({
         }
       }
     } catch (error) {
-      console.error("Error requesting permission:", error);
+      console.warn("Unable to request permission:", error);
     }
   };
 
@@ -210,64 +240,43 @@ export function usePermission(permission: PermissionType) {
 
   const checkPermission = React.useCallback(async () => {
     try {
-      let permissionStatus;
-      
-      if (permission === "camera") {
-        // For camera, you need to use useCameraPermissions hook
-        return;
-      } else if (permission === "location") {
-        permissionStatus = await Location.getBackgroundPermissionsAsync();
-      } else if (permission === "locationForeground") {
-        permissionStatus = await Location.getForegroundPermissionsAsync();
-      } else if (permission === "mediaLibrary") {
-        permissionStatus = await MediaLibrary.getPermissionsAsync();
-      } else if (permission === "contacts") {
-        permissionStatus = await Contacts.getPermissionsAsync();
-      } else if (permission === "notifications") {
-        permissionStatus = await Notifications.getPermissionsAsync();
-      }
+      const permissionStatus = await getPermissionAsync(permission);
       
       if (permissionStatus) {
-        setStatus(permissionStatus.status as "undetermined" | "granted" | "denied");
+        setStatus(normalizePermissionStatus(permissionStatus.status));
       }
     } catch (error) {
-      console.error("Error checking permission:", error);
+      console.warn("Unable to check permission:", error);
     }
   }, [permission]);
 
   React.useEffect(() => {
-    checkPermission();
+    const timeout = setTimeout(() => {
+      void checkPermission();
+    }, 0);
+
+    return () => clearTimeout(timeout);
   }, [checkPermission]);
 
   const request = async () => {
     try {
-      let permissionResult;
-      
       if (permission === "camera") {
         // For camera, return true for demo
         setStatus("granted");
         return true;
-      } else if (permission === "location") {
-        permissionResult = await Location.requestBackgroundPermissionsAsync();
-      } else if (permission === "locationForeground") {
-        permissionResult = await Location.requestForegroundPermissionsAsync();
-      } else if (permission === "mediaLibrary") {
-        permissionResult = await MediaLibrary.requestPermissionsAsync();
-      } else if (permission === "contacts") {
-        permissionResult = await Contacts.requestPermissionsAsync();
-      } else if (permission === "notifications") {
-        permissionResult = await Notifications.requestPermissionsAsync();
       }
+
+      const permissionResult = await requestPermissionAsync(permission);
       
       if (permissionResult) {
-        const newStatus = permissionResult.status as "undetermined" | "granted" | "denied";
+        const newStatus = normalizePermissionStatus(permissionResult.status);
         setStatus(newStatus);
         return newStatus === "granted";
       }
       
       return false;
     } catch (error) {
-      console.error("Error requesting permission:", error);
+      console.warn("Unable to request permission:", error);
       return false;
     }
   };

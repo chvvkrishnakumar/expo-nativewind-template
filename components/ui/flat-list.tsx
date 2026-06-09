@@ -33,7 +33,12 @@ function FlatListInner<ItemT>(
 }
 
 // Export with proper typing for generics
-export const FlatList = React.forwardRef(FlatListInner) as <ItemT = any>(
+export const FlatList = React.forwardRef(function FlatListWithRef<ItemT>(
+  props: FlatListProps<ItemT>,
+  ref: React.Ref<RNFlatList<ItemT>>
+) {
+  return <FlatListInner {...props} forwardedRef={ref} />;
+}) as <ItemT = any>(
   props: FlatListProps<ItemT> & React.RefAttributes<RNFlatList<ItemT>>
 ) => React.ReactElement;
 

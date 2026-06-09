@@ -13,10 +13,6 @@ import {
   useCameraPermissions,
   usePermission,
 } from "@/components/ui";
-import * as Location from "expo-location";
-import * as MediaLibrary from "expo-media-library";
-import * as Contacts from "expo-contacts";
-import * as Notifications from "expo-notifications";
 import * as Clipboard from 'expo-clipboard';
 import { Camera, MapPin, Image, Users, Bell } from "lucide-react-native";
 import { iconWithClassName } from "@/components/ui/lib/icons/icon-with-classname";
@@ -34,9 +30,6 @@ export default function PermissionsDemo() {
   
   // Other permissions using the general hook
   const locationPermission = usePermission("locationForeground");
-  const mediaLibraryPermission = usePermission("mediaLibrary");
-  const contactsPermission = usePermission("contacts");
-  const notificationsPermission = usePermission("notifications");
 
   const handleCameraRequest = async () => {
     // Check if we need to open settings
@@ -226,8 +219,13 @@ const { status } = await Location.requestForegroundPermissionsAsync();`)}
                 variant="outline"
                 size="sm"
                 onPress={async () => {
-                  const { status } = await MediaLibrary.requestPermissionsAsync();
-                  Alert.alert("Media Library", `Status: ${status}`);
+                  try {
+                    const MediaLibrary = await import("expo-media-library");
+                    const { status } = await MediaLibrary.requestPermissionsAsync();
+                    Alert.alert("Media Library", `Status: ${status}`);
+                  } catch {
+                    Alert.alert("Media Library", "This native module is not available in the current client.");
+                  }
                 }}
               >
                 <ImageIcon className="h-4 w-4 mr-2" />
@@ -238,8 +236,13 @@ const { status } = await Location.requestForegroundPermissionsAsync();`)}
                 variant="outline"
                 size="sm"
                 onPress={async () => {
-                  const { status } = await Notifications.requestPermissionsAsync();
-                  Alert.alert("Notifications", `Status: ${status}`);
+                  try {
+                    const Notifications = await import("expo-notifications");
+                    const { status } = await Notifications.requestPermissionsAsync();
+                    Alert.alert("Notifications", `Status: ${status}`);
+                  } catch {
+                    Alert.alert("Notifications", "This native module is not available in the current client.");
+                  }
                 }}
               >
                 <BellIcon className="h-4 w-4 mr-2" />
@@ -250,8 +253,13 @@ const { status } = await Location.requestForegroundPermissionsAsync();`)}
                 variant="outline"
                 size="sm"
                 onPress={async () => {
-                  const { status } = await Contacts.requestPermissionsAsync();
-                  Alert.alert("Contacts", `Status: ${status}`);
+                  try {
+                    const Contacts = await import("expo-contacts");
+                    const { status } = await Contacts.requestPermissionsAsync();
+                    Alert.alert("Contacts", `Status: ${status}`);
+                  } catch {
+                    Alert.alert("Contacts", "This native module is not available in the current client.");
+                  }
                 }}
               >
                 <UsersIcon className="h-4 w-4 mr-2" />

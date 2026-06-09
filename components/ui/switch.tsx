@@ -23,6 +23,11 @@ const Switch = React.forwardRef<
 >(({ className, checked = false, onCheckedChange, disabled, children, ...props }, ref) => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const handlePress = React.useCallback(() => {
+    if (!disabled && onCheckedChange) {
+      onCheckedChange(!checked);
+    }
+  }, [checked, onCheckedChange, disabled]);
 
   // Use native Switch on Android, custom on Web
   if (Platform.OS === "android") {
@@ -43,13 +48,6 @@ const Switch = React.forwardRef<
       />
     );
   }
-
-  // Web implementation
-  const handlePress = React.useCallback(() => {
-    if (!disabled && onCheckedChange) {
-      onCheckedChange(!checked);
-    }
-  }, [checked, onCheckedChange, disabled]);
 
   return (
     <Pressable

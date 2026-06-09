@@ -3,7 +3,6 @@ import {
   View,
   Pressable,
   Modal,
-  Animated,
   useWindowDimensions,
   Platform,
   ScrollView,
@@ -18,6 +17,18 @@ import { Text } from "./text";
 const MenuIcon = iconWithClassName(Menu);
 const XIcon = iconWithClassName(X);
 
+interface DrawerContextType {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  side: "left" | "right";
+}
+
+const DrawerContext = React.createContext<DrawerContextType>({
+  open: false,
+  onOpenChange: () => {},
+  side: "left",
+});
+
 interface DrawerProps {
   children: React.ReactNode;
   open?: boolean;
@@ -25,21 +36,11 @@ interface DrawerProps {
   side?: "left" | "right";
 }
 
-const DrawerContext = React.createContext<{
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  side: "left" | "right";
-}>({
-  open: false,
-  onOpenChange: () => {},
-  side: "left",
-});
-
-const Drawer = ({ 
-  children, 
-  open = false, 
+const Drawer = ({
+  children,
+  open = false,
   onOpenChange = () => {},
-  side = "left" 
+  side = "left"
 }: DrawerProps) => {
   return (
     <DrawerContext.Provider value={{ open, onOpenChange, side }}>
@@ -55,7 +56,7 @@ const DrawerTrigger = React.forwardRef<
   }
 >(({ onPress, asChild, children, className, ...props }, ref) => {
   const { onOpenChange } = React.useContext(DrawerContext);
-  
+
   if (asChild && React.isValidElement(children)) {
     const childProps = children.props as any || {};
     return React.cloneElement(children, {
@@ -67,18 +68,18 @@ const DrawerTrigger = React.forwardRef<
       },
     } as any);
   }
-  
+
   return (
     <Pressable
       ref={ref}
-      className={cn("p-2", className)}
+      className={cn("p-2 rounded-md bg-card border border-border active:bg-accent", className)}
       onPress={(e) => {
         onPress?.(e);
         onOpenChange(true);
       }}
       {...props}
     >
-      {children || <MenuIcon className="h-6 w-6 text-foreground" />}
+      {children || <MenuIcon className="h-6 w-6 text-card-foreground" />}
     </Pressable>
   );
 });
@@ -94,31 +95,17 @@ const DrawerContent = React.forwardRef<
   DrawerContentProps
 >(({ children, className, ...props }, ref) => {
   const { open, onOpenChange, side } = React.useContext(DrawerContext);
-  const { width } = useWindowDimensions();
-  const animatedValue = React.useRef(new Animated.Value(0)).current;
-  
+  const { width: screenWidth } = useWindowDimensions();
+
+  // Use fallback width if not available
+  const width = screenWidth > 0 ? screenWidth : 393;
   const drawerWidth = Math.min(width * 0.8, 320);
-
-  React.useEffect(() => {
-    Animated.timing(animatedValue, {
-      toValue: open ? 1 : 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [open, animatedValue]);
-
-  if (!open) return null;
-
-  const translateX = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: side === "left" ? [-drawerWidth, 0] : [drawerWidth, 0],
-  });
 
   return (
     <Modal
       visible={open}
       transparent
-      animationType="none"
+      animationType={side === "left" ? "slide" : "slide"}
       statusBarTranslucent
       onRequestClose={() => onOpenChange(false)}
     >
@@ -128,35 +115,34 @@ const DrawerContent = React.forwardRef<
           className="absolute inset-0 bg-foreground/50"
           onPress={() => onOpenChange(false)}
         />
-        
+
         {/* Drawer */}
-        <Animated.View
-          ref={ref}
-          style={[
-            {
-              width: drawerWidth,
-              transform: [{ translateX }],
-              position: "absolute",
-              height: "100%",
-              [side]: 0,
-            },
-          ]}
-          className={cn(
-            "bg-background",
-            Platform.select({
-              ios: "shadow-lg shadow-foreground/25",
-              android: "elevation-16",
-            }),
-            className
-          )}
-          {...props}
+        <View
+          style={{
+            width: drawerWidth,
+            position: "absolute",
+            height: "100%",
+            [side]: 0,
+          }}
         >
-          <SafeAreaView edges={["top", "bottom"]} className="flex-1">
+          <SafeAreaView
+            ref={ref}
+            edges={["top", "bottom"]}
+            className={cn(
+              "flex-1 bg-background",
+              Platform.select({
+                ios: "shadow-lg shadow-foreground/25",
+                android: "elevation-16",
+              }),
+              className
+            )}
+            {...props}
+          >
             <ScrollView className="flex-1">
               {children}
             </ScrollView>
           </SafeAreaView>
-        </Animated.View>
+        </View>
       </View>
     </Modal>
   );
@@ -168,7 +154,7 @@ const DrawerHeader = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof View>
 >(({ className, children, ...props }, ref) => {
   const { onOpenChange } = React.useContext(DrawerContext);
-  
+
   return (
     <View
       ref={ref}
@@ -208,7 +194,7 @@ const DrawerItem = React.forwardRef<
   }
 >(({ className, icon, children, onPress, ...props }, ref) => {
   const { onOpenChange } = React.useContext(DrawerContext);
-  
+
   return (
     <Pressable
       ref={ref}
@@ -227,7 +213,7 @@ const DrawerItem = React.forwardRef<
           {icon}
         </View>
       )}
-      {typeof children === 'function' 
+      {typeof children === 'function'
         ? (children as any)({ pressed: false })
         : children}
     </Pressable>
@@ -259,12 +245,12 @@ const HamburgerMenu = React.forwardRef<
     "top-left": "left-4",
     "top-right": "right-4",
   };
-  
+
   return (
     <Pressable
       ref={ref}
       className={cn(
-        "absolute z-50 p-3 bg-background rounded-lg border border-border",
+        "absolute z-50 p-3 bg-card rounded-lg border border-border active:bg-accent",
         Platform.select({
           ios: "shadow-sm shadow-foreground/25",
           android: "elevation-4",
@@ -275,7 +261,7 @@ const HamburgerMenu = React.forwardRef<
       style={{ top: top + 8 }}
       {...props}
     >
-      <MenuIcon className="h-6 w-6 text-foreground" />
+      <MenuIcon className="h-6 w-6 text-card-foreground" />
     </Pressable>
   );
 });

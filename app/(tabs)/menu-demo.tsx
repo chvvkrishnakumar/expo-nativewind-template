@@ -39,8 +39,8 @@ export default function MenuDemo() {
       <View className="flex-row items-center justify-between p-4 border-b border-border bg-background">
         <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} side={position}>
           <DrawerTrigger asChild>
-            <Pressable className="p-2">
-              <MenuIcon className="h-6 w-6 text-foreground" />
+            <Pressable className="p-2 rounded-md bg-card border border-border active:bg-accent">
+              <MenuIcon className="h-6 w-6 text-card-foreground" />
             </Pressable>
           </DrawerTrigger>
           <DrawerContent>
