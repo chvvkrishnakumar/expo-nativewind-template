@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-06-09
+
+### Added
+- ✨ **Expo SDK 56 Upgrade**
+  - Updated from Expo SDK 54 to SDK 56
+  - Latest React Native features and improvements
+  - Enhanced performance and stability
+
+### Fixed
+- 🐛 **Sheet Component**
+  - Fixed issue where Sheet content was not rendering on first open (overlay only)
+  - Refactored to use context-based state management
+  - Simplified implementation for better reliability
+  - Now uses Modal's built-in slide animation
+
+- 🐛 **Drawer Component**
+  - Fixed issue where Drawer content was not rendering on first open
+  - Removed complex Animated.Value logic
+  - Simplified to match Dialog component pattern
+  - Now renders consistently on first and subsequent opens
+
+### Changed
+- 📝 Both Sheet and Drawer components now follow context-based pattern (same as Dialog)
+- Improved component reliability by removing unnecessary animation complexity
+- Better modal content rendering lifecycle management
+
 ## [0.1.0] - 2025-09-22
 
 ### Initial Release
