@@ -318,9 +318,6 @@ eas build --platform android --profile production
 | [expo-notifications](https://docs.expo.dev/versions/latest/sdk/notifications/) | Push notifications | [API](https://docs.expo.dev/versions/latest/sdk/notifications/) |
 | [expo-contacts](https://docs.expo.dev/versions/latest/sdk/contacts/) | Contacts access | [API](https://docs.expo.dev/versions/latest/sdk/contacts/) |
 
-## 🔍 SEO Keywords
-
-`expo starter template`, `expo ui components`, `react native starter kit`, `expo typescript template`, `react native ui kit`, `expo tailwind template`, `nativewind starter`, `expo component library`, `react native boilerplate`, `expo production template`, `mobile app starter`, `cross-platform ui components`
 
 ## 🤔 Frequently Asked Questions
 
